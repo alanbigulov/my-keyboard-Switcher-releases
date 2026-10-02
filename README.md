@@ -102,20 +102,6 @@ every input-monitoring tool requires.
 - **Caps Lock doesn't capitalize** — while the app is Active it opens the palette instead. It works normally again the moment the app quits or loses permissions.
 - **IME flickers / doesn't switch** — switch verification retries automatically; a beep means it still failed — please open an issue with the layout name.
 
-## Building from source
-
-> [!NOTE]
-> The source repository is private — this section is for collaborators.
-
-```bash
-git clone https://github.com/alanbigulov/my-keyboard-Switcher.git
-cd my-keyboard-Switcher
-xcodebuild -project MyKeyboardSwitcher.xcodeproj -scheme MyKeyboardSwitcher \
-  -configuration Release -derivedDataPath build
-```
-
-The `.app` bundle lands in `build/Build/Products/Release/`. Requires Xcode with macOS 13+ SDK.
-
 ## Acknowledgments
 
 MyKeyboardSwitcher is a fork of [CapsLockSwitcher](https://github.com/doasync/CapsLockSwitcher) by [@doasync](https://github.com/doasync) — and was itself distributed as CapsLockSwitcher until v1.2.1. Big thanks to the original author — the core idea (remapping a trigger key through `UserKeyMapping` and selecting input sources directly via Text Input Source Services) and the codebase this project started from are his work.
