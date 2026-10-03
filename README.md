@@ -31,9 +31,9 @@ when it switches. MyKeyboardSwitcher takes a different approach:
 ## Features
 
 - **Instant switching** — a `CGEventTap` consumes the trigger key and selects the next favorite via Text Input Source Services directly
-- **Switch HUD** — with 3 favorites, every cycle flashes a floating row of the set centered on screen (~700 ms, active layout highlighted). Appears instantly — keyboard-initiated actions are never animated — and never steals focus
+- **Switch HUD** — with 2+ favorites, every cycle flashes a floating row of the set centered on screen (~700 ms, active layout highlighted). Appears instantly — keyboard-initiated actions are never animated — and never steals focus
 - **Favorites palette** — borderless panel centered on the active screen: flags and checkboxes on every row, `↑`/`↓` or hover to navigate, `Space`/`1–9` or a click toggles, `Enter`/**Apply** applies, `Esc`/**Cancel** cancels. Scrolls when the list is long
-- **Add/remove languages in place** — the palette's "＋ Add/Remove Language…" button opens System Settings → Keyboard; changes land in the open palette and the menu within a second, no restart
+- **Add/remove sources in place** — the palette's *All Input Sources* section lists everything installed: `＋` enables a source, `−` disables it — the current source is switched away first and the last usable one can't be removed. A `−` on a favorites row disables that source outright, dropping it from the cycle. Changes land in the palette and menu within a second, no restart. The section collapses via its `▸` header and remembers the state. IME modes macOS only manages in System Settings stay dimmed; the footer's *Open Keyboard Settings…* button covers them
 - **Swappable triggers** — menu toggle exchanges the roles: Caps Lock cycles, Right Shift opens the palette. Persisted across restarts
 - **IME-safe** — input methods (Korean `2-Set`, Japanese, Chinese…) are listed alongside layouts; every switch is verified ~100 ms later and retried with a mode-aware fallback, working around the known `TISSelectInputSource` CJKV flakiness
 - **Two dedicated triggers** — Right Shift → `LANG1`, Caps Lock → `LANG2`, remapped through the system `UserKeyMapping` HID property via direct IOKit calls. Left Shift and every other key are untouched
@@ -65,12 +65,15 @@ open /Applications/MyKeyboardSwitcher.app
 
 | Action | How |
 |---|---|
-| Cycle favorites forward | **Right Shift** (HUD shows the set when 3 are picked) |
+| Cycle favorites forward | **Right Shift** (HUD shows the set when 2+ are picked) |
 | Open / close palette | **Caps Lock** |
 | Navigate palette | `↑` / `↓` or hover |
 | Toggle favorite | `Space`, `1`–`9`, or click the row |
+| Enable/disable an input source | `＋` / `−` (or `Space`/click) in *All Input Sources* |
+| Disable a source from favorites | `−` on its row in the favorites section |
+| Collapse/expand *All Input Sources* | click the `▾`/`▸` section header |
 | Apply / cancel | `Enter` / `Esc`, or the **Apply** / **Cancel** buttons |
-| Add/remove a layout in macOS | palette → **＋ Add/Remove Language…** |
+| Manage sources the app can't (IME modes) | palette → **Open Keyboard Settings…** |
 | Swap the two trigger roles | status icon → **Swap Trigger Keys** |
 | Same palette, from the menu | status icon → **Edit Favorites…** |
 | Enable at login | status icon → **Launch on Startup** |
@@ -98,7 +101,7 @@ every input-monitoring tool requires.
 ## Troubleshooting
 
 - **Not switching** — check the icon: ⚠️ means permissions were revoked (toggle them off/on); ⌨️ means active. Ensure 2+ favorites are checked and still enabled in System Settings → Keyboard → Input Sources.
-- **Layout missing from the list** — add it via the palette's **＋ Add/Remove Language…** button or System Settings → Keyboard → Text Input → Input Sources. Both layouts and input methods appear.
+- **Layout missing from the list** — enable it with `＋` in the palette's *All Input Sources* section, or via **Open Keyboard Settings…** → Text Input → Input Sources. Both layouts and input methods appear.
 - **Caps Lock doesn't capitalize** — while the app is Active it opens the palette instead. It works normally again the moment the app quits or loses permissions.
 - **IME flickers / doesn't switch** — switch verification retries automatically; a beep means it still failed — please open an issue with the layout name.
 
