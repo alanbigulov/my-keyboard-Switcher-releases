@@ -39,7 +39,7 @@ when it switches. MyKeyboardSwitcher takes a different approach:
 - **Two dedicated triggers** — Right Shift → `LANG1`, Caps Lock → `LANG2`, remapped through the system `UserKeyMapping` HID property via direct IOKit calls. Left Shift and every other key are untouched
 - **Clean teardown** — both remaps are reverted synchronously on quit, permission loss, and launch, so your keys never stay remapped after the app exits
 - **Live source sync** — debounced TIS notifications plus a cross-check against the `AppleEnabledInputSources` backing store keep the palette and menu in sync with System Settings, even where TIS's per-process snapshot lags
-- **Native & lightweight** — background agent, no Dock icon, no helper processes, ~1 MB
+- **Native & lightweight** — universal app for Apple Silicon and Intel Macs, background agent, no Dock icon, no helper processes, ~2 MB
 - **Menu bar control** — status icon (⚠️ needs permissions / ⌨️ active), favorites checklist with flag icons, ● on the live layout, launch-at-login toggle
 
 ## Quick start
