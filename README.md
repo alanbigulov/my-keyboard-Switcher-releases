@@ -37,7 +37,7 @@ when it switches. MyKeyboardSwitcher takes a different approach:
 - **Swappable triggers** — menu toggle exchanges the roles: Caps Lock cycles, Right Shift opens the palette. Persisted across restarts
 - **IME-safe** — input methods (Korean `2-Set`, Japanese, Chinese…) are listed alongside layouts; every switch is verified ~100 ms later and retried with a mode-aware fallback, working around the known `TISSelectInputSource` CJKV flakiness
 - **Two dedicated triggers** — Right Shift → `LANG1`, Caps Lock → `LANG2`, remapped through the system `UserKeyMapping` HID property via direct IOKit calls. Left Shift and every other key are untouched
-- **Clean teardown** — both remaps are reverted synchronously on quit, permission loss, and launch, so your keys never stay remapped after the app exits
+- **Clean teardown** — the app adds and removes only its own two pairs in `UserKeyMapping`, so key mappings you set with `hidutil` stay in place. If you had mapped Right Shift or Caps Lock yourself, that mapping comes back when the app quits normally, unless another program changed the key mapping while the app ran. The remap is removed on quit (from the menu, `kill` or `killall`), when permissions are lost, and at launch
 - **Live source sync** — debounced TIS notifications plus a cross-check against the `AppleEnabledInputSources` backing store keep the palette and menu in sync with System Settings, even where TIS's per-process snapshot lags
 - **Native & lightweight** — universal app for Apple Silicon and Intel Macs, background agent, no Dock icon, no helper processes, ~2 MB
 - **Menu bar control** — status icon (⚠️ needs permissions / ⌨️ active), favorites checklist with flag icons, ● on the live layout, launch-at-login toggle
@@ -84,7 +84,8 @@ from favorites keeps you on it until the next cycle.
 
 ## How it works
 
-- `IOHIDEventSystemClientSetProperty` writes both trigger pairs (`RightShift→LANG1`, `CapsLock→LANG2`) into `UserKeyMapping` atomically — and writes identity mappings back on exit
+- `IOHIDEventSystemClientCopyProperty` reads `UserKeyMapping`, and `IOHIDEventSystemClientSetProperty` writes it back with both trigger pairs (`RightShift→LANG1`, `CapsLock→LANG2`) added and every other pair kept. On exit the app removes its pairs and restores any pair of yours for those two keys that it replaced
+- While the app is Active it reads `UserKeyMapping` back every 3 seconds and whenever its menu or palette opens. If another program replaced the array, the app puts its two pairs back
 - `CGEventTap` intercepts the remapped key codes, consumes them, and routes the two keys to cycle / palette — **Swap Trigger Keys** only flips that routing table, the remap itself is constant
 - `TISSelectInputSource` performs the switch; a delayed check confirms the current source changed, with one retry and an input-mode fallback for IMEs
 - Favorites persist as an ordered `favoriteSourceIDs` array in `UserDefaults` (migrates automatically from the v1.0 two-slot model)
@@ -102,7 +103,9 @@ every input-monitoring tool requires.
 
 - **Not switching** — check the icon: ⚠️ means permissions were revoked (toggle them off/on); ⌨️ means active. Ensure 2+ favorites are checked and still enabled in System Settings → Keyboard → Input Sources.
 - **Layout missing from the list** — enable it with `＋` in the palette's *All Input Sources* section, or via **Open Keyboard Settings…** → Text Input → Input Sources. Both layouts and input methods appear.
-- **Caps Lock doesn't capitalize** — while the app is Active it opens the palette instead. It works normally again the moment the app quits or loses permissions.
+- **A second copy does nothing** — only one copy of the app runs at a time. A second copy, started from another folder, with `open -n` or from Xcode, quits at launch and leaves the running copy alone. To switch copies, quit the running one from its menu first.
+- **Caps Lock doesn't capitalize** — while the app is Active it opens the palette instead. It works normally again as soon as the app quits or loses permissions.
+- **Right Shift or Caps Lock still remapped after the app is gone** — this happens only after a crash, a Force Quit from Activity Monitor, `kill -9`, or a stop from a debugger, because the app gets no chance to clean up. Launch the app again, or restart the Mac. To clear the remap from Terminal, run `hidutil property --set '{"UserKeyMapping":[]}'`. That command also clears any key mappings you set with `hidutil` yourself, so run your own `hidutil` command again afterwards.
 - **IME flickers / doesn't switch** — switch verification retries automatically; a beep means it still failed — please open an issue with the layout name.
 
 ## Acknowledgments
