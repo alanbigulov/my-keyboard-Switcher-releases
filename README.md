@@ -56,7 +56,7 @@ open /Applications/MyKeyboardSwitcher.app
 3. Press **Right Shift** — done, it just cycles
 
 > [!NOTE]
-> Updating to a new build? The ad-hoc signature changes, so macOS revokes Accessibility. Toggle the permission off/on once in System Settings.
+> Updating from 1.2.8 or earlier? macOS asks once whether to open a version that "differs from previously opened versions". Choose **Open Anyway**, then toggle Accessibility off and on once in System Settings. Later updates keep the permission.
 
 > [!IMPORTANT]
 > Upgrading from ≤1.2.0? The app was renamed **CapsLockSwitcher → MyKeyboardSwitcher** and the bundle ID changed to `com.doasync.MyKeyboardSwitcher`. macOS treats it as a new app: grant Accessibility to the new entry, remove the old `CapsLockSwitcher.app`, and re-enable **Launch on Startup** if you used it.
