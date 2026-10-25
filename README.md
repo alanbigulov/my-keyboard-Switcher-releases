@@ -30,12 +30,12 @@ when it switches. MyKeyboardSwitcher takes a different approach:
 
 ## Features
 
-- **Instant switching** — a `CGEventTap` consumes the trigger key and selects the next favorite via Text Input Source Services directly
+- **Instant switching** — a `CGEventTap` consumes the trigger key and selects the next favorite directly through the macOS text input services
 - **Switch HUD** — with 2+ favorites, every cycle flashes a floating row of the set centered on screen (~700 ms, active layout highlighted). Appears instantly — keyboard-initiated actions are never animated — and never steals focus
 - **Favorites palette** — borderless panel centered on the active screen: flags and checkboxes on every row, `↑`/`↓` or hover to navigate, `Space`/`1–9` or a click toggles, `Enter`, **Apply** or the palette key applies, `Esc`/**Cancel** cancels. Scrolls when the list is long
 - **Add/remove sources in place** — the palette's *All Input Sources* section lists everything installed: `＋` enables a source, `−` disables it — the current source is switched away first and the last usable one can't be removed. A `−` on a favorites row disables that source outright, dropping it from the cycle. Changes land in the palette and menu within a second, no restart. The section collapses via its `▸` header and remembers the state. IME modes macOS only manages in System Settings stay dimmed; the footer's *Open Keyboard Settings…* button covers them
 - **Swappable triggers** — menu toggle exchanges the roles: Caps Lock cycles, Right Shift opens the palette. Persisted across restarts
-- **IME-safe** — input methods (Korean `2-Set`, Japanese, Chinese…) are listed alongside layouts; every switch is verified ~100 ms later and retried with a mode-aware fallback, working around the known `TISSelectInputSource` CJKV flakiness
+- **IME-safe** — input methods (Korean `2-Set`, Japanese, Chinese…) are listed alongside layouts. A switch to or from one goes to the app you are typing in, the way the Input menu in the menu bar sends it, so that app switches too. Every switch is verified ~100 ms later and retried with a mode-aware fallback, working around the known `TISSelectInputSource` CJKV flakiness
 - **Two dedicated triggers** — Right Shift → `LANG1`, Caps Lock → `LANG2`, remapped through the system `UserKeyMapping` HID property via direct IOKit calls as soon as the app has Accessibility. Until 2 favorites are picked, both keys open the palette. Left Shift and every other key are untouched, except the かな/英数 keys of JIS keyboards (see Troubleshooting)
 - **Clean teardown** — the app adds and removes only its own two pairs in `UserKeyMapping`, so key mappings you set with `hidutil` stay in place. If you had mapped Right Shift or Caps Lock yourself, that mapping comes back when the app quits normally, unless another program changed the key mapping while the app ran. The remap is removed on quit (from the menu, `kill` or `killall`), when permissions are lost, and at launch
 - **Live source sync** — debounced TIS notifications plus a cross-check against the `AppleEnabledInputSources` backing store keep the palette and menu in sync with System Settings, even where TIS's per-process snapshot lags
@@ -87,7 +87,7 @@ from favorites keeps you on it until the next cycle.
 - `IOHIDEventSystemClientCopyProperty` reads `UserKeyMapping`, and `IOHIDEventSystemClientSetProperty` writes it back with both trigger pairs (`RightShift→LANG1`, `CapsLock→LANG2`) added and every other pair kept. On exit the app removes its pairs and restores any pair of yours for those two keys that it replaced
 - While the app has Accessibility it reads `UserKeyMapping` back every 3 seconds and whenever its menu or palette opens. If another program replaced the array, the app puts its two pairs back
 - `CGEventTap` intercepts the remapped key codes, consumes them, and routes the two keys to cycle / palette. Until 2 favorites are picked, both go to the palette. **Swap Trigger Keys** only flips the routing after that, the remap itself is constant
-- `TISSelectInputSource` performs the switch; a delayed check confirms the current source changed, with one retry and an input-mode fallback for IMEs
+- A switch between two keyboard layouts calls `TISSelectInputSource`. A switch to or from an input method sends TSM message 7 to the `com.apple.tsm.portname` port of the process that has keyboard focus, as the Input menu does (ported from macism). Called from a background app, `TISSelectInputSource` commits the new source system-wide before the focused app hears of it, and with an input method on either side that app can keep typing with the old source. When this app has keyboard focus, or the TSM request fails, the switch uses `TISSelectInputSource`. The sandbox has one temporary exception, the lookup of that port. A delayed check confirms the current source changed, with one retry and an input-mode fallback for IMEs
 - Favorites persist as an ordered `favoriteSourceIDs` array in `UserDefaults` (migrates automatically from the v1.0 two-slot model)
 - Source lists come from `TISCreateInputSourceList` cross-checked against the `AppleEnabledInputSources` plist — TIS's per-process snapshot can lag removals of IME input modes for minutes without posting a notification, so membership is verified against the backing store
 - Debounced TIS change notifications plus a delayed recheck keep the menu — and an open palette — in sync when input sources are edited in System Settings
@@ -96,7 +96,7 @@ from favorites keeps you on it until the next cycle.
 
 The app needs **Accessibility** to observe the two trigger keys system-wide via
 the event tap. It checks only whether the pressed key is a trigger — it does
-not log keystrokes and sends nothing anywhere. This is the standard permission
+not log keystrokes or send them anywhere. This is the standard permission
 every input-monitoring tool requires.
 
 ## Troubleshooting
@@ -107,8 +107,10 @@ every input-monitoring tool requires.
 - **Caps Lock doesn't capitalize, Right Shift isn't a Shift** — while the app has Accessibility they are its trigger keys, also before you pick favorites. They work normally again as soon as the app quits or loses permissions.
 - **かな / 英数 (JIS) or 한/영 / 한자 (Korean) keys stop working** — these keys send `LANG1` and `LANG2`, the same codes the app turns Right Shift and Caps Lock into. While the app has Accessibility it takes them over: before 2 favorites are picked both open the palette, after that they cycle and open the palette like Right Shift and Caps Lock. Switch input modes from the menu bar input menu or with `Control`-`Space` meanwhile, or quit the app.
 - **Right Shift or Caps Lock still remapped after the app is gone** — this happens only after a crash, a Force Quit from Activity Monitor, `kill -9`, or a stop from a debugger, because the app gets no chance to clean up. Launch the app again, or restart the Mac. To clear the remap from Terminal, run `hidutil property --set '{"UserKeyMapping":[]}'`. That command also clears any key mappings you set with `hidutil` yourself, so run your own `hidutil` command again afterwards.
-- **IME flickers / doesn't switch** — switch verification retries automatically; a beep means it still failed, and the HUD then highlights the layout you are still on — please open an issue with the layout name. To record what the app saw, run `log stream --level debug --predicate 'subsystem == "com.doasync.MyKeyboardSwitcher"'` in Terminal, press your switch key a few times, stop it with `Control`-`C`, and attach the output to the issue. The log names input sources and app states, never the keys you press.
+- **IME flickers / doesn't switch** — switch verification retries automatically; a beep means it still failed, and the HUD then highlights the layout you are still on — please open an issue with the layout name. To record what the app saw, run `log stream --level debug --predicate 'subsystem == "com.doasync.MyKeyboardSwitcher"'` in Terminal, press your switch key a few times, stop it with `Control`-`C`, and attach the output to the issue. The log names input sources and app states, never the keys you press. A `TSM failed` line in that log means the app you typed in did not take the switch, and the app fell back to `TISSelectInputSource`.
 
 ## Acknowledgments
 
 MyKeyboardSwitcher is a fork of [CapsLockSwitcher](https://github.com/doasync/CapsLockSwitcher) by [@doasync](https://github.com/doasync) — and was itself distributed as CapsLockSwitcher until v1.2.1. Big thanks to the original author — the core idea (remapping a trigger key through `UserKeyMapping` and selecting input sources directly via Text Input Source Services) and the codebase this project started from are his work.
+
+The way input-method switches reach the app you type in is ported from [macism](https://github.com/laishulu/macism) by laishulu, Copyright (c) 2023, under the [MIT License](https://github.com/laishulu/macism/blob/master/LICENSE).
