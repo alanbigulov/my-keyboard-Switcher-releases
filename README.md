@@ -33,7 +33,7 @@ when it switches. MyKeyboardSwitcher takes a different approach:
 - **Instant switching** — a `CGEventTap` consumes the trigger key and selects the next favorite directly through the macOS text input services
 - **Switch HUD** — with 2+ favorites, every cycle flashes a floating row of the set centered on screen (~700 ms, active layout highlighted). Appears instantly — keyboard-initiated actions are never animated — and never steals focus
 - **Favorites palette** — borderless panel centered on the active screen: flags and checkboxes on every row, `↑`/`↓` or hover to navigate, `Space`/`1–9` or a click toggles, `Enter`, **Apply** or the palette key applies, `Esc`/**Cancel** cancels. Scrolls when the list is long
-- **Add/remove sources in place** — the palette's *All Input Sources* section lists everything installed: `＋` enables a source, `−` disables it — the current source is switched away first and the last usable one can't be removed. A `−` on a favorites row disables that source outright, dropping it from the cycle. Changes land in the palette and menu within a second, no restart. The section collapses via its `▸` header and remembers the state. IME modes macOS only manages in System Settings stay dimmed; the footer's *Open Keyboard Settings…* button covers them
+- **Add/remove sources in place** — the palette's *All Input Sources* section lists everything installed: `＋` enables a source, `−` disables it — the current source is switched away first and the last usable one can't be removed. On an input method with modes (Korean, Pinyin) the `−` removes the whole method with every mode of it, and `＋` brings the method back with the modes it had. A `−` on a favorites row disables that source outright, dropping it from the cycle. On an IME mode row such as 2-Set Korean it removes the whole input method, and the tooltip says so. Changes land in the palette and menu within a second, no restart. The section collapses via its `▸` header and remembers the state. Adding or removing a single IME mode, and installing a third-party input method, stay in System Settings; the footer's *Open Keyboard Settings…* button covers them
 - **Swappable triggers** — menu toggle exchanges the roles: Caps Lock cycles, Right Shift opens the palette. Persisted across restarts
 - **IME-safe** — input methods (Korean `2-Set`, Japanese, Chinese…) are listed alongside layouts. A switch to or from one goes to the app you are typing in, the way the Input menu in the menu bar sends it, so that app switches too. Every switch is verified ~100 ms later and retried with a mode-aware fallback, working around the known `TISSelectInputSource` CJKV flakiness
 - **Two dedicated triggers** — Right Shift → `LANG1`, Caps Lock → `LANG2`, remapped through the system `UserKeyMapping` HID property via direct IOKit calls as soon as the app has Accessibility. Until 2 favorites are picked, both keys open the palette. Left Shift and every other key are untouched, except the かな/英数 keys of JIS keyboards (see Troubleshooting)
@@ -70,10 +70,10 @@ open /Applications/MyKeyboardSwitcher.app
 | Navigate palette | `↑` / `↓` or hover |
 | Toggle favorite | `Space`, `1`–`9`, or click the row |
 | Enable/disable an input source | `＋` / `−` (or `Space`/click) in *All Input Sources* |
-| Disable a source from favorites | `−` on its row in the favorites section |
+| Disable a source from favorites | `−` on its row in the favorites section (on an IME mode such as 2-Set Korean, the whole input method goes) |
 | Collapse/expand *All Input Sources* | click the `▾`/`▸` section header |
 | Apply / cancel | `Enter` or the palette key / `Esc`, or the **Apply** / **Cancel** buttons |
-| Manage sources the app can't (IME modes) | palette → **Open Keyboard Settings…** |
+| Manage sources the app can't (single IME modes, third-party installs) | palette → **Open Keyboard Settings…** |
 | Swap the two trigger roles | status icon → **Swap Trigger Keys** |
 | Same palette, from the menu | status icon → **Edit Favorites…** |
 | Enable at login | status icon → **Launch on Startup** |
